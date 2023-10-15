@@ -14,3 +14,18 @@ Dokumentationen (intern und Extern) für die Computerspende
 Datenbankengine für Bookstack und Nextcloud
 * Traefik 
 Proxy Container, der die Applikationen nach außen öffnet
+
+
+
+## Networks
+
+
+* mariadb
+* host_net
+
+
+
+## containers:
+
+Mariadb: https://hub.docker.com/_/mariadb
+Adminer: https://hub.docker.com/_/adminer/
