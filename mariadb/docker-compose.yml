@@ -1,0 +1,22 @@
+version: '3'
+
+services:
+  mariadb:
+    image: mariadb:11
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_USER: root
+    volumes:
+      - database:/var/lib/mysql
+    networks:
+      - mariadb
+    expose:
+      - "3306"
+
+volumes:
+  database:
+
+networks:
+    mariadb:
+        external: true    

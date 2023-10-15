@@ -1,0 +1,68 @@
+version: '3'
+
+services:
+  redis:
+    image: redis:alpine
+    restart: always
+    networks:
+      - default    
+
+  app:
+    image: nextcloud:27-apache
+    restart: always
+    volumes:
+      - ./app:/var/www/html
+      - ./data:/var/www/html/data
+    environment:
+      - VIRTUAL_HOST=${DOCKER_DOMAIN}     # enter your domain name
+      - MYSQL_HOST=mariadb
+      - REDIS_HOST=redis
+      - OVERWRITECLIURL=https://${DOCKER_DOMAIN}
+      - OVERWRITEPROTOCOL=https
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=${MYSQL_ROOT_PASSWORD} 
+
+    depends_on:
+      - redis
+    expose:
+      - "80"
+    networks:
+      - mariadb
+      - host_net   
+      - default
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=host_net
+      - "traefik.http.routers.nextcloud.rule=Host(`${DOCKER_DOMAIN}`)"
+      - traefik.http.routers.nextcloud.entrypoints=websecure
+      - traefik.http.routers.nextcloud.tls.certresolver=myresolver
+      - traefik.http.routers.httpnextcloud.entrypoints=web
+      - "traefik.http.routers.httpnextcloud.rule=Host(`${DOCKER_DOMAIN}`)"
+      - traefik.http.services.httpnextcloud.loadbalancer.server.port=80
+# redirect to https    
+      - traefik.http.routers.httpnextcloud.middlewares=redirect-to-https
+      - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
+
+  cron:
+    image: nextcloud:27-apache    
+    restart: always
+    volumes:
+      - ./app:/var/www/html
+      - ./data:/var/www/html/data
+    entrypoint: /cron.sh
+    depends_on:
+      - redis
+    networks:
+      - mariadb
+      - default
+
+volumes:
+  app:
+  data:
+
+networks:
+    host_net:
+        external: true    
+    mariadb:
+        external: true    
