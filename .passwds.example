@@ -1,0 +1,16 @@
+# Accounts und Settings
+
+
+In diesem Dokument sollen alle notwendigen Einstellungen während der Installation aufgeführt werden.
+
+
+## nextcloud
+
+admin-user nextcloud: 
+smtp-User
+    User:
+    passwort: 
+    smtp-server: 
+    smtp-port: 
+
+empfohlene Apps überlegen

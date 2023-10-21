@@ -2,3 +2,4 @@ mariadb/.env
 nextcloud/app
 nextcloud/data
 nextcloud/.env
+.passwds
