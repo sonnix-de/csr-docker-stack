@@ -1,4 +1,5 @@
 mariadb/.env
+zammad/.env
 nextcloud/app
 nextcloud/data
 nextcloud/.env

@@ -1,0 +1,157 @@
+version: '3'
+
+services:
+
+  zammad-backup:
+    command: ["zammad-backup"]
+    depends_on:
+      - zammad-railsserver
+      - zammad-postgresql
+    entrypoint: /usr/local/bin/backup.sh
+    environment:
+      - BACKUP_SLEEP=86400
+      - HOLD_DAYS=3
+      - POSTGRESQL_USER=${POSTGRES_USER}
+      - POSTGRESQL_PASSWORD=${POSTGRES_PASS}
+    image: postgres:${POSTGRES_VERSION}
+    restart: ${RESTART}
+    volumes:
+      - ./zammad-backup:/var/tmp/zammad
+      - zammad-data:/opt/zammad:ro
+      - ./scripts/backup.sh:/usr/local/bin/backup.sh:ro
+    networks:
+      - default        
+
+  zammad-elasticsearch:
+    image: bitnami/elasticsearch:8.5.1
+    restart: ${RESTART}
+    volumes:
+      - elasticsearch-data:/bitnami/elasticsearch/data
+    networks:
+      - default        
+
+  zammad-init:
+    command: ["zammad-init"]
+    depends_on:
+      - zammad-postgresql
+    environment:
+      - MEMCACHE_SERVERS=${MEMCACHE_SERVERS}
+      - POSTGRESQL_USER=${POSTGRES_USER}
+      - POSTGRESQL_PASS=${POSTGRES_PASS}
+      - REDIS_URL=${REDIS_URL}
+    image: ${IMAGE_REPO}:${VERSION}
+    restart: on-failure
+    volumes:
+      - zammad-data:/opt/zammad
+    networks:
+      - default        
+
+  zammad-memcached:
+    command: memcached -m 256M
+    image: memcached:1.6.17-alpine
+    restart: ${RESTART}
+    networks:
+      - default        
+
+  zammad-nginx:
+    command: ["zammad-nginx"]
+    expose:
+      - "8080"
+#    ports:
+#      - 8050:8080
+    networks:
+      - host_net   
+      - default    
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=host_net
+      - traefik.http.routers.zammad.rule=Host(`tickets.computerspende-regensburg.de`)
+      - traefik.http.routers.zammad.entrypoints=websecure
+      - traefik.http.routers.zammad.tls.certresolver=myresolver   
+      # Notwendig, da by default den port 8080 verwendet.
+      - traefik.http.services.zammad.loadbalancer.server.port=8080      
+    depends_on:
+      - zammad-railsserver
+    image: ${IMAGE_REPO}:${VERSION}
+    restart: ${RESTART}
+    volumes:
+      - zammad-data:/opt/zammad
+
+  zammad-postgresql:
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASS}
+    image: postgres:${POSTGRES_VERSION}
+    restart: ${RESTART}
+    volumes:
+      - postgresql-data:/var/lib/postgresql/data
+    networks:
+      - default        
+
+  zammad-railsserver:
+    command: ["zammad-railsserver"]
+    depends_on:
+      - zammad-memcached
+      - zammad-postgresql
+      - zammad-redis
+    environment:
+      - MEMCACHE_SERVERS=${MEMCACHE_SERVERS}
+      - REDIS_URL=${REDIS_URL}
+    image: ${IMAGE_REPO}:${VERSION}
+    restart: ${RESTART}
+    volumes:
+      - zammad-data:/opt/zammad
+    networks:
+      - default        
+
+  zammad-redis:
+    image: redis:7.0.5-alpine
+    restart: ${RESTART}
+    networks:
+      - default        
+
+  zammad-scheduler:
+    command: ["zammad-scheduler"]
+    depends_on:
+      - zammad-memcached
+      - zammad-railsserver
+      - zammad-redis
+    environment:
+      - MEMCACHE_SERVERS=${MEMCACHE_SERVERS}
+      - REDIS_URL=${REDIS_URL}
+    image: ${IMAGE_REPO}:${VERSION}
+    restart: ${RESTART}
+    volumes:
+      - zammad-data:/opt/zammad
+    networks:
+      - default        
+
+  zammad-websocket:
+    command: ["zammad-websocket"]
+    depends_on:
+      - zammad-memcached
+      - zammad-railsserver
+      - zammad-redis
+    environment:
+      - MEMCACHE_SERVERS=${MEMCACHE_SERVERS}
+      - REDIS_URL=${REDIS_URL}
+    image: ${IMAGE_REPO}:${VERSION}
+    restart: ${RESTART}
+    volumes:
+      - zammad-data:/opt/zammad
+    networks:
+      - default        
+
+volumes:
+  elasticsearch-data:
+    driver: local
+  postgresql-data:
+    driver: local
+  zammad-backup:
+    driver: local
+  zammad-data:
+    driver: local
+
+networks:
+    host_net:
+        external: true       
